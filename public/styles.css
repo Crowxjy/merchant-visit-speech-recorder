@@ -58,6 +58,7 @@ button {
 
 .topbar,
 .controls,
+.visit-setup,
 .caption-zone,
 .summary-zone {
   position: relative;
@@ -148,7 +149,68 @@ h1 {
   background: var(--blue);
 }
 
+.visit-setup {
+  margin-top: 8px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.7fr);
+  gap: 14px;
+}
+
+.visit-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.visit-setup input[type="text"],
+.visit-setup select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  background: rgba(244, 240, 232, 0.62);
+  color: var(--ink);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.visit-setup input[type="text"]:focus,
+.visit-setup select:focus {
+  outline: 2px solid rgba(231, 71, 46, 0.22);
+  border-color: var(--signal);
+  background: #fff;
+}
+
+.consent-row {
+  margin-top: 14px;
+  flex-direction: row !important;
+  align-items: flex-start;
+  padding: 12px;
+  background: rgba(244, 240, 232, 0.62);
+  border: 1px solid var(--line);
+  line-height: 1.5;
+}
+
+.consent-row input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--signal);
+  flex: none;
+}
+
 .controls {
+  margin-top: 18px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -229,6 +291,13 @@ button:disabled {
   font-size: 13px;
 }
 
+.visit-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+}
+
 .summary-zone {
   margin-top: 24px;
   padding-top: 18px;
@@ -249,6 +318,10 @@ button:disabled {
   border: 1px solid var(--line);
 }
 
+.summary-card.wide {
+  grid-column: 1 / -1;
+}
+
 .summary-card h3 {
   margin: 0 0 10px;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -263,6 +336,80 @@ button:disabled {
 .summary-card li {
   margin: 8px 0;
   line-height: 1.45;
+}
+
+.todo-list,
+.script-list {
+  display: grid;
+  gap: 10px;
+}
+
+.todo-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.todo-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.todo-item p,
+.script-item p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.todo-item small,
+.script-item small,
+.script-item em {
+  display: block;
+  color: var(--muted);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.priority {
+  min-width: 34px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 76, 121, 0.12);
+  color: var(--blue);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.priority.高 {
+  background: rgba(231, 71, 46, 0.14);
+  color: var(--signal);
+}
+
+.script-item {
+  padding: 12px;
+  background: rgba(244, 240, 232, 0.62);
+  border-left: 4px solid var(--blue);
+}
+
+.script-item p {
+  margin: 6px 0;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.result-actions button {
+  flex: 1 1 180px;
 }
 
 .confirm-overlay {
@@ -320,6 +467,10 @@ button:disabled {
 
   .controls button {
     flex: 1 1 100%;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
   }
 
   .partial {

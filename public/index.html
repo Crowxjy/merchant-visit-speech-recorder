@@ -30,6 +30,29 @@
           <span></span>
         </div>
 
+        <section class="visit-setup">
+          <div class="field-row">
+            <label>
+              <span>客户 / 门店名称</span>
+              <input id="customerInput" type="text" placeholder="如：XX便利店" autocomplete="off" />
+            </label>
+            <label>
+              <span>门店类型</span>
+              <select id="storeTypeInput">
+                <option value="品牌">品牌</option>
+                <option value="自助">自助</option>
+                <option value="线下">线下</option>
+                <option value="便利店">便利店</option>
+                <option value="餐饮">餐饮</option>
+              </select>
+            </label>
+          </div>
+          <label class="consent-row">
+            <input id="consentInput" type="checkbox" />
+            <span>我已知悉并将告知对方，本次拜访录音仅用于生成总结，同意录音。</span>
+          </label>
+        </section>
+
         <div class="controls">
           <button id="startBtn" class="primary" type="button">
             <span class="record-dot"></span>
@@ -41,7 +64,10 @@
 
         <section class="caption-zone" aria-live="polite">
           <div class="section-heading">
-            <p class="label">实时对话记录</p>
+            <div>
+              <p class="label">实时对话记录</p>
+              <p id="visitMeta" class="visit-meta">尚未开始拜访</p>
+            </div>
             <span id="timeText" class="hint">00:00</span>
           </div>
           <div id="partialText" class="partial">等待开始拜访记录...</div>
@@ -53,6 +79,10 @@
             <span id="summaryMeta" class="hint"></span>
           </div>
           <div id="summaryText" class="summary-grid"></div>
+          <div class="result-actions">
+            <button id="copySummaryBtn" class="ghost" type="button">复制总结</button>
+            <button id="newVisitBtn" class="primary" type="button">再记一场</button>
+          </div>
         </section>
       </section>
     </main>

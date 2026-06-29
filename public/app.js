@@ -6,6 +6,10 @@ const USE_LOCAL_ASR = ["127.0.0.1", "localhost", "::1"].includes(location.hostna
 const startBtn = document.querySelector("#startBtn");
 const stopBtn = document.querySelector("#stopBtn");
 const clearBtn = document.querySelector("#clearBtn");
+const customerInput = document.querySelector("#customerInput");
+const storeTypeInput = document.querySelector("#storeTypeInput");
+const consentInput = document.querySelector("#consentInput");
+const visitMeta = document.querySelector("#visitMeta");
 const partialText = document.querySelector("#partialText");
 const statusPill = document.querySelector("#statusPill");
 const timeText = document.querySelector("#timeText");
@@ -16,6 +20,8 @@ const summaryMeta = document.querySelector("#summaryMeta");
 const confirmOverlay = document.querySelector("#confirmOverlay");
 const confirmEndBtn = document.querySelector("#confirmEndBtn");
 const continueVisitBtn = document.querySelector("#continueVisitBtn");
+const copySummaryBtn = document.querySelector("#copySummaryBtn");
+const newVisitBtn = document.querySelector("#newVisitBtn");
 
 let audioContext;
 let sourceNode;
@@ -28,6 +34,7 @@ let timer;
 let committedTranscript = "";
 let finalizedLines = [];
 let pendingEndConfirmation = false;
+let latestSummaryText = "";
 
 function setStatus(kind, label) {
   statusPill.className = `status ${kind}`;
@@ -209,21 +216,136 @@ function renderSummaryCard(title, items, fallback) {
   `;
 }
 
+function getVisitContext() {
+  const customer = customerInput.value.trim() || "未填写客户";
+  const storeType = storeTypeInput.value || "未选择类型";
+  return { customer, storeType };
+}
+
+function updateVisitMeta(state = "尚未开始拜访") {
+  const { customer, storeType } = getVisitContext();
+  visitMeta.textContent = `${state} · ${customer} · ${storeType}`;
+}
+
+function makeTodos(sentences) {
+  const followUps = findSentences(sentences, ["后续", "回访", "联系", "资料", "方案", "报价", "合同", "明天", "下周", "确认", "推进"], 5);
+  if (followUps.length) {
+    return followUps.map((item, index) => ({
+      priority: index === 0 ? "高" : "中",
+      content: item,
+      due: index === 0 ? "24小时内" : "下次拜访前",
+    }));
+  }
+
+  return [
+    { priority: "高", content: "整理本次拜访诉求，补充客户资料和关键异议。", due: "今天内" },
+    { priority: "中", content: "向商家同步适配方案、报价或活动政策。", due: "下次沟通前" },
+  ];
+}
+
+function makeScripts(needs, risks, context) {
+  const firstNeed = needs[0] || "您刚才提到的核心需求";
+  const firstRisk = risks[0] || "您担心的投入和效果";
+  return [
+    {
+      scenario: "需求确认",
+      line: `关于${firstNeed}，我先帮您拆成可落地的步骤，下一次带着方案和您逐项确认。`,
+      why: "先复述需求，再给出下一步动作，降低商家的沟通成本。",
+    },
+    {
+      scenario: "异议回应",
+      line: `${firstRisk}我理解，我们可以先从${context.storeType}场景里风险最低的一步试起，看数据再扩大。`,
+      why: "把顾虑转成小步试点，更容易推进。",
+    },
+  ];
+}
+
+function renderTodoList(todos) {
+  return `
+    <article class="summary-card wide">
+      <h3>待办清单</h3>
+      <div class="todo-list">
+        ${todos.map((todo) => `
+          <div class="todo-item">
+            <span class="priority ${escapeHtml(todo.priority)}">${escapeHtml(todo.priority)}</span>
+            <div>
+              <p>${escapeHtml(todo.content)}</p>
+              <small>${escapeHtml(todo.due)}</small>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderScriptList(scripts) {
+  return `
+    <article class="summary-card wide">
+      <h3>下次拜访话术</h3>
+      <div class="script-list">
+        ${scripts.map((script) => `
+          <div class="script-item">
+            <small>场景：${escapeHtml(script.scenario)}</small>
+            <p>“${escapeHtml(script.line)}”</p>
+            <em>${escapeHtml(script.why)}</em>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function buildPlainSummary(context, needs, business, commitments, risks, todos, scripts, text) {
+  const lines = [
+    "【拜访总结】",
+    `客户/门店：${context.customer}`,
+    `门店类型：${context.storeType}`,
+    `记录时长：${timeText.textContent}`,
+    "",
+    "【客户诉求】",
+    ...(needs.length ? needs.map((item) => `· ${item}`) : ["· 暂未识别到明确诉求"]),
+    "",
+    "【关键信息】",
+    ...(business.length ? business.map((item) => `· ${item}`) : ["· 暂未识别到清晰业务要点"]),
+    "",
+    "【我方承诺】",
+    ...(commitments.length ? commitments.map((item) => `· ${item}`) : ["· 暂未识别到明确承诺"]),
+    "",
+    "【风险点】",
+    ...(risks.length ? risks.map((item) => `· ${item}`) : ["· 暂未识别到明显风险或顾虑"]),
+    "",
+    "【待办】",
+    ...todos.map((todo) => `· [${todo.priority}] ${todo.content}（${todo.due}）`),
+    "",
+    "【下次话术】",
+    ...scripts.map((script) => `· ${script.scenario}：${script.line}`),
+    "",
+    "【完整文字稿】",
+    text || "（无）",
+  ];
+  return lines.join("\n");
+}
+
 function generateVisitSummary() {
   const text = committedTranscript.trim();
+  const context = getVisitContext();
   summaryZone.hidden = false;
 
   if (!text) {
     summaryMeta.textContent = "暂无有效对话";
     summaryText.innerHTML = renderSummaryCard("总结状态", [], "还没有识别到可总结的拜访内容。");
+    latestSummaryText = "";
     return;
   }
 
   const sentences = splitSentences(text);
   const needs = findSentences(sentences, ["需要", "想", "希望", "能不能", "是否", "怎么", "如何", "问题", "痛点"]);
   const business = findSentences(sentences, ["门店", "商家", "客户", "订单", "销量", "库存", "配送", "核销", "活动", "平台"]);
-  const followUps = findSentences(sentences, ["后续", "回访", "联系", "资料", "方案", "报价", "合同", "明天", "下周", "确认", "推进"]);
+  const commitments = findSentences(sentences, ["我帮", "我们会", "可以给", "发给", "提供", "安排", "确认", "推进", "方案", "报价"], 4);
   const risks = findSentences(sentences, ["担心", "顾虑", "贵", "成本", "不会", "复杂", "慢", "风险", "不确定", "暂时"]);
+  const todos = makeTodos(sentences);
+  const scripts = makeScripts(needs, risks, context);
 
   const matchedTopics = unique([
     text.includes("价格") || text.includes("报价") ? "价格与报价" : "",
@@ -237,14 +359,18 @@ function generateVisitSummary() {
   summaryMeta.textContent = `${sentences.length || 1} 条对话线索`;
   summaryText.innerHTML = [
     renderSummaryCard("拜访概况", [
+      `客户/门店：${context.customer}，类型：${context.storeType}。`,
       `本次记录时长 ${timeText.textContent}，已形成约 ${text.length} 字原始对话。`,
       matchedTopics.length ? `重点涉及：${matchedTopics.join("、")}。` : "系统已根据当前对话生成初步结构化纪要。",
     ], "已生成本次拜访概况。"),
-    renderSummaryCard("商家诉求", needs, "暂未识别到明确诉求，建议继续补充商家的目标、问题和期望。"),
-    renderSummaryCard("沟通要点", business, "暂未识别到清晰业务要点，可在后续沟通中确认门店经营、订单、活动或履约信息。"),
-    renderSummaryCard("待跟进事项", followUps, "暂未识别到明确待办，建议补充下一次联系时间、资料发送或方案确认事项。"),
-    renderSummaryCard("风险与顾虑", risks, "暂未识别到明显风险或顾虑。"),
+    renderSummaryCard("客户诉求", needs, "暂未识别到明确诉求，建议继续补充商家的目标、问题和期望。"),
+    renderSummaryCard("关键信息", business, "暂未识别到清晰业务要点，可在后续沟通中确认门店经营、订单、活动或履约信息。"),
+    renderSummaryCard("我方承诺", commitments, "暂未识别到明确承诺。"),
+    renderSummaryCard("风险点", risks, "暂未识别到明显风险或顾虑。"),
+    renderTodoList(todos),
+    renderScriptList(scripts),
   ].join("");
+  latestSummaryText = buildPlainSummary(context, needs, business, commitments, risks, todos, scripts, text);
 }
 
 function showEndVisitConfirm() {
@@ -256,6 +382,13 @@ function hideEndVisitConfirm() {
 }
 
 async function startRecording() {
+  if (!consentInput.checked) {
+    setStatus("error", "需授权");
+    renderSystemMessage("请先勾选录音授权，并在开始前告知商家本次录音仅用于生成拜访总结。");
+    return;
+  }
+
+  updateVisitMeta("准备记录");
   if (USE_LOCAL_ASR) {
     await startLocalAsrRecording();
   } else {
@@ -277,6 +410,7 @@ async function startLocalAsrRecording() {
     const data = JSON.parse(event.data);
     if (data.type === "ready") {
       setStatus("live", "记录中");
+      updateVisitMeta("记录中");
       renderLiveDialogue("开始记录商家沟通...");
       return;
     }
@@ -361,6 +495,7 @@ function startBrowserSpeechRecording() {
   recognition.interimResults = true;
 
   recognition.onstart = () => {
+    updateVisitMeta("记录中");
     renderLiveDialogue("开始记录商家沟通...");
     startTimer();
   };
@@ -458,17 +593,20 @@ clearBtn.addEventListener("click", () => {
   committedTranscript = "";
   finalizedLines = [];
   pendingEndConfirmation = false;
+  latestSummaryText = "";
   hideEndVisitConfirm();
   summaryZone.hidden = true;
   summaryText.innerHTML = "";
   summaryMeta.textContent = "";
   renderLiveDialogue();
+  updateVisitMeta();
   timeText.textContent = "00:00";
 });
 
 confirmEndBtn.addEventListener("click", () => {
   hideEndVisitConfirm();
   setStatus("idle", "已结束");
+  updateVisitMeta("已结束");
   generateVisitSummary();
   summaryZone.scrollIntoView({ behavior: "smooth", block: "start" });
 });
@@ -476,7 +614,38 @@ confirmEndBtn.addEventListener("click", () => {
 continueVisitBtn.addEventListener("click", () => {
   hideEndVisitConfirm();
   setStatus("idle", "可继续");
+  updateVisitMeta("可继续");
   renderLiveDialogue("可继续补充记录，点击“开始记录”继续本次拜访。");
 });
 
+copySummaryBtn.addEventListener("click", async () => {
+  if (!latestSummaryText) {
+    renderSystemMessage("还没有可复制的总结，请先结束拜访并生成总结。");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(latestSummaryText);
+    const oldText = copySummaryBtn.textContent;
+    copySummaryBtn.textContent = "已复制";
+    window.setTimeout(() => {
+      copySummaryBtn.textContent = oldText;
+    }, 1400);
+  } catch {
+    renderSystemMessage("复制失败，请手动选择总结内容复制。");
+  }
+});
+
+newVisitBtn.addEventListener("click", () => {
+  customerInput.value = "";
+  storeTypeInput.value = "品牌";
+  consentInput.checked = false;
+  clearBtn.click();
+  setStatus("idle", "未开始");
+});
+
+customerInput.addEventListener("input", () => updateVisitMeta());
+storeTypeInput.addEventListener("change", () => updateVisitMeta());
+
+updateVisitMeta();
 renderLiveDialogue();
