@@ -425,8 +425,15 @@ h1 {
 }
 
 .ghost.stop {
+  border-color: rgba(101, 87, 255, 0.24);
+  color: #232838;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.ghost.stop:disabled {
+  border-color: #e6e8f3;
   color: #b5b8c8;
-  background: rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.52);
 }
 
 .ghost.clear {
@@ -454,6 +461,10 @@ button:disabled {
   height: 11px;
   flex: none;
   border-radius: 3px;
+  background: var(--primary);
+}
+
+.ghost.stop:disabled .stop-dot {
   background: #b9bcce;
 }
 
